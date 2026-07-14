@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ========== КОНФИГ ==========
-BOT_TOKEN = "8987437321:AAGa9oXg__-xTX3ii7RnH2azoPvMO4tfoFI"  # ЗАМЕНИ НА НОВЫЙ ТОКЕН!
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8987437321:AAGa9oXg__-xTX3ii7RnH2azoPvMO4tfoFI")
 IMAGE_PATH = "mil8kavpn.png"
 
 USER_DATA_FILE = "users_data.json"
@@ -25,14 +25,14 @@ VPN_LINKS_FILE = "vpn_links.json"
 PENDING_REQUESTS_FILE = "pending_requests.json"
 
 # Цена премиума в звездах (Telegram Stars)
-PREMIUM_PRICE_ADMIN = 1  # 1 копейка = 0.01 ⭐
-PREMIUM_PRICE_USER = 100  # 100 копеек = 1 ⭐
+PREMIUM_PRICE_ADMIN = 1
+PREMIUM_PRICE_USER = 100
 
-# Список админов (их username или user_id)
+# Список админов
 ADMINS = {
     "admin",
     "mil8kavpn",
-    "7737148018",  # ТВОЙ USER_ID!
+    "7737148018",
 }
 
 # Ссылки спонсоров
@@ -42,8 +42,8 @@ SPONSOR_LINKS = {
 }
 
 # Цена VPN в монетах
-VPN_PRICE = 15000  # Цена за VPN
-VPN_PRICE_PREMIUM = 7500  # Цена со скидкой для премиум
+VPN_PRICE = 15000
+VPN_PRICE_PREMIUM = 7500
 
 
 # ========== РАБОТА С JSON ==========
@@ -68,25 +68,20 @@ def generate_vpn_code():
 def is_admin(user):
     if not user:
         return False
-
     if user.username and user.username.lower() in ADMINS:
         return True
-
     if str(user.id) in ADMINS:
         return True
-
     return False
 
 
 def get_user_price(user):
-    """Возвращает цену в копейках"""
     if is_admin(user):
-        return PREMIUM_PRICE_ADMIN  # 1 копейка = 0.01 ⭐
-    return PREMIUM_PRICE_USER  # 100 копеек = 1 ⭐
+        return PREMIUM_PRICE_ADMIN
+    return PREMIUM_PRICE_USER
 
 
 def get_user_price_display(user):
-    """Возвращает цену для отображения в звездах"""
     if is_admin(user):
         return "1 ⭐"
     return "100 ⭐"
@@ -157,23 +152,17 @@ async def send_with_image(update, context, text, reply_markup=None, parse_mode='
 
 # ========== ПРОВЕРКА СПОНСОРОВ ==========
 def check_sponsors_required(user_data, user_id):
-    """Проверяет, нажал ли пользователь на кнопки спонсоров"""
     if user_id not in user_data:
         return False
-
-    # Если ключа нет, создаем его
     if "sponsors_checked" not in user_data[user_id]:
         user_data[user_id]["sponsors_checked"] = {"sponsor1": False, "sponsor2": False}
         save_json(USER_DATA_FILE, user_data)
         return False
-
-    # Проверяем, что нажаты обе кнопки
     sponsors = user_data[user_id]["sponsors_checked"]
     return sponsors.get("sponsor1", False) and sponsors.get("sponsor2", False)
 
 
 async def require_sponsors_check(update, context):
-    """Показывает экран с требованием нажать на спонсоров"""
     user_id = None
     if hasattr(update, 'callback_query') and update.callback_query:
         user_id = str(update.callback_query.from_user.id)
@@ -188,14 +177,12 @@ async def require_sponsors_check(update, context):
         await start(update, context)
         return
 
-    # Проверяем состояние спонсоров
     if "sponsors_checked" not in user_data[user_id]:
         user_data[user_id]["sponsors_checked"] = {"sponsor1": False, "sponsor2": False}
         save_json(USER_DATA_FILE, user_data)
 
     sponsors_checked = user_data[user_id]["sponsors_checked"]
 
-    # Создаем кнопки с состоянием
     sponsor1_text = "✅ Спонсор 1" if sponsors_checked.get("sponsor1", False) else "🤝 Спонсор 1"
     sponsor2_text = "✅ Спонсор 2" if sponsors_checked.get("sponsor2", False) else "🤝 Спонсор 2"
 
@@ -204,7 +191,6 @@ async def require_sponsors_check(update, context):
         [InlineKeyboardButton(sponsor2_text, callback_data="sponsor2")],
     ]
 
-    # Если оба спонсора нажаты, показываем кнопку "Войти"
     if sponsors_checked.get("sponsor1", False) and sponsors_checked.get("sponsor2", False):
         keyboard.append([InlineKeyboardButton("🚀 Войти в бота", callback_data="enter_bot")])
 
@@ -214,12 +200,12 @@ async def require_sponsors_check(update, context):
         "🔒 *Доступ к боту*\n\n"
         "Для использования бота необходимо подписаться на наших спонсоров:\n\n"
         "1️⃣ Нажми на кнопку *Спонсор 1* и перейди по ссылке\n"
-        "2️⃣ Нажми на кнопку *Спонсор 2* и перейди по ссылке выполни два задания (после выполнения можешь отписаться от каналов, но без этого приз не будет выдан!\n\n"
+        "2️⃣ Нажми на кнопку *Спонсор 2* и перейди по ссылке выполни два задания\n\n"
         "✅ После нажатия на обе кнопки появится кнопка *Войти в бота*"
     )
 
     await send_with_image(update, context, text, reply_markup)
-    
+
 
 # ========== ГЛАВНОЕ МЕНЮ ==========
 async def main_menu(update, context):
@@ -231,7 +217,6 @@ async def main_menu(update, context):
         await start(update, context)
         return
 
-    # Проверяем, нажаты ли спонсоры
     if not check_sponsors_required(user_data, user_id):
         await require_sponsors_check(update, context)
         return
@@ -245,7 +230,6 @@ async def main_menu(update, context):
         [InlineKeyboardButton("🛒 Купить VPN", callback_data="buy_vpn_menu")],
     ]
 
-    # Добавляем админ-панель для админов
     if is_admin_user:
         keyboard.append([InlineKeyboardButton("⚙️ Админ-панель", callback_data="admin_panel")])
 
@@ -303,7 +287,6 @@ async def start(update, context):
         save_json(USER_DATA_FILE, user_data)
         logger.info(f"✅ New user: {user_id} (admin: {is_admin(user)})")
 
-    # Проверяем спонсоров перед показом меню
     if not check_sponsors_required(user_data, user_id):
         await require_sponsors_check(update, context)
     else:
@@ -316,7 +299,7 @@ async def handle_sponsor(update, context):
     await query.answer()
 
     user_id = str(query.from_user.id)
-    sponsor_key = query.data  # "sponsor1" или "sponsor2"
+    sponsor_key = query.data
 
     user_data = load_json(USER_DATA_FILE)
 
@@ -324,32 +307,23 @@ async def handle_sponsor(update, context):
         await query.edit_message_text("❌ Ошибка! Начни с /start")
         return
 
-    # Если ключа sponsors_checked нет, создаем его
     if "sponsors_checked" not in user_data[user_id]:
         user_data[user_id]["sponsors_checked"] = {"sponsor1": False, "sponsor2": False}
 
-    # Проверяем, нажимал ли уже пользователь на эту кнопку
     if user_data[user_id]["sponsors_checked"].get(sponsor_key, False):
-        # Показываем сообщение, что уже нажато, и обновляем меню
         await require_sponsors_check(update, context)
         return
 
-    # Отмечаем, что пользователь нажал на кнопку
     user_data[user_id]["sponsors_checked"][sponsor_key] = True
-
-    # Даём бонус за нажатие
     user_data[user_id]["balance"] += 50
 
     save_json(USER_DATA_FILE, user_data)
 
-    # Получаем ссылку спонсора
     link = SPONSOR_LINKS.get(sponsor_key)
     sponsor_name = "Спонсор 1" if sponsor_key == "sponsor1" else "Спонсор 2"
 
-    # Обновляем меню с проверкой
     await require_sponsors_check(update, context)
 
-    # Отправляем отдельное сообщение с благодарностью и ссылкой
     keyboard = [
         [InlineKeyboardButton("🔗 Перейти к спонсору", url=link)],
         [InlineKeyboardButton("🔙 Вернуться", callback_data="back_to_sponsors")]
@@ -363,7 +337,6 @@ async def handle_sponsor(update, context):
         f"👆 Нажми на кнопку ниже, чтобы перейти к спонсору"
     )
 
-    # Отправляем новое сообщение
     await context.bot.send_message(
         chat_id=user_id,
         text=text,
@@ -374,7 +347,6 @@ async def handle_sponsor(update, context):
 
 # ========== ВХОД В БОТА ==========
 async def enter_bot(update, context):
-    """Вход в бота после проверки спонсоров"""
     query = update.callback_query
     await query.answer()
 
@@ -385,18 +357,15 @@ async def enter_bot(update, context):
         await query.edit_message_text("❌ Ошибка! Начни с /start")
         return
 
-    # Проверяем, нажаты ли обе кнопки спонсоров
     sponsors_checked = user_data[user_id].get("sponsors_checked", {})
     if not sponsors_checked.get("sponsor1", False) or not sponsors_checked.get("sponsor2", False):
         await require_sponsors_check(update, context)
         return
 
-    # Если все проверки пройдены, показываем главное меню
     await main_menu(update, context)
 
 
 async def back_to_sponsors(update, context):
-    """Возврат к проверке спонсоров"""
     query = update.callback_query
     await query.answer()
     await require_sponsors_check(update, context)
@@ -742,7 +711,6 @@ async def buy_premium_menu(update, context):
 
     user_info = user_data[user_id]
 
-    # Проверяем, админ ли пользователь
     is_admin_user = is_admin(user)
     price_display = get_user_price_display(user)
 
@@ -783,7 +751,6 @@ async def buy_premium_menu(update, context):
 
 # ========== ОПЛАТА ЧЕРЕЗ STARS ==========
 async def pay_premium(update, context):
-    """Отправка инвойса для оплаты через Stars"""
     query = update.callback_query
     await query.answer()
 
@@ -795,15 +762,12 @@ async def pay_premium(update, context):
         await query.edit_message_text("❌ Ошибка! Начни с /start")
         return
 
-    # Определяем цену для пользователя (в копейках)
     price_in_cents = get_user_price(user)
 
     logger.info(f"💰 User {user_id} price: {price_in_cents} cents")
 
-    # Создаем инвойс для оплаты звездами
     prices = [LabeledPrice("⭐ Премиум статус (30 дней)", price_in_cents)]
 
-    # Отправляем инвойс
     await context.bot.send_invoice(
         chat_id=user_id,
         title="⭐ Премиум статус",
@@ -813,8 +777,8 @@ async def pay_premium(update, context):
                     "• Радужный ник\n"
                     "• Эксклюзивный статус",
         payload=f"premium_{user_id}_{datetime.now().timestamp()}",
-        provider_token="",  # Для Stars оставляем пустым
-        currency="XTR",  # XTR = Telegram Stars
+        provider_token="",
+        currency="XTR",
         prices=prices,
         start_parameter="premium_payment",
         need_name=False,
@@ -827,7 +791,6 @@ async def pay_premium(update, context):
 
 # ========== ОБРАБОТКА ПРЕДВАРИТЕЛЬНОЙ ПРОВЕРКИ ==========
 async def pre_checkout_handler(update, context):
-    """Обработка предварительной проверки оплаты"""
     query = update.pre_checkout_query
     await query.answer(ok=True)
     logger.info(f"✅ Pre-checkout ok for user {query.from_user.id}")
@@ -835,7 +798,6 @@ async def pre_checkout_handler(update, context):
 
 # ========== ОБРАБОТКА УСПЕШНОЙ ОПЛАТЫ ==========
 async def successful_payment_handler(update, context):
-    """Обработка успешной оплаты"""
     user_id = str(update.effective_user.id)
     user_data = load_json(USER_DATA_FILE)
 
@@ -843,7 +805,6 @@ async def successful_payment_handler(update, context):
         await update.message.reply_text("❌ Ошибка! Начни с /start")
         return
 
-    # Активируем премиум
     user_data[user_id]["premium"] = True
     user_data[user_id]["premium_until"] = (datetime.now() + timedelta(days=30)).isoformat()
 
@@ -947,7 +908,6 @@ async def vpn_complete(update, context):
         await send_with_image(update, context, text, reply_markup)
         return
 
-    # Проверяем, есть ли уже активная заявка
     if user_data[user_id].get("vpn_request") and user_data[user_id]["vpn_request"].get("status") == "pending":
         keyboard = [[InlineKeyboardButton("📤 Отправить скриншоты", callback_data="send_screenshots")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -958,7 +918,6 @@ async def vpn_complete(update, context):
         await send_with_image(update, context, text, reply_markup)
         return
 
-    # Создаем заявку
     user_data[user_id]["vpn_request"] = {
         "status": "pending",
         "created_at": datetime.now().isoformat(),
@@ -968,7 +927,6 @@ async def vpn_complete(update, context):
     }
     save_json(USER_DATA_FILE, user_data)
 
-    # Загружаем ожидающие заявки
     pending = load_json(PENDING_REQUESTS_FILE)
     pending[user_id] = user_data[user_id]["vpn_request"]
     save_json(PENDING_REQUESTS_FILE, pending)
@@ -1003,7 +961,6 @@ async def send_screenshots(update, context):
         await send_with_image(update, context, text, reply_markup)
         return
 
-    # Устанавливаем состояние ожидания скриншотов
     context.user_data['awaiting_screenshots'] = True
     context.user_data['screenshot_count'] = 0
     context.user_data['screenshots'] = []
@@ -1013,7 +970,7 @@ async def send_screenshots(update, context):
 
     text = (
         "📸 *Отправь 10 скриншотов*\n\n"
-        f"Отправь 10 скриншотов ({context.user_data['screenshot_count']}/10).\n"
+        f"Отправь 10 скриншотов (0/10).\n"
         "Нажми 'Отмена' чтобы прервать отправку."
     )
 
@@ -1030,12 +987,10 @@ async def handle_screenshots(update, context):
     if user_id not in user_data:
         return
 
-    # Проверяем, что это фото
     if not update.message.photo:
         await update.message.reply_text("❌ Пожалуйста, отправь фото!")
         return
 
-    # Проверяем, есть ли активная заявка
     if not user_data[user_id].get("vpn_request") or user_data[user_id]["vpn_request"].get("status") != "pending":
         context.user_data['awaiting_screenshots'] = False
         context.user_data['screenshot_count'] = 0
@@ -1043,24 +998,19 @@ async def handle_screenshots(update, context):
         await update.message.reply_text("❌ У тебя нет активной заявки на VPN!")
         return
 
-    # Получаем файл фото
     photo = update.message.photo[-1]
     file = await context.bot.get_file(photo.file_id)
 
-    # Сохраняем скриншот
     context.user_data['screenshots'].append(file.file_id)
     context.user_data['screenshot_count'] += 1
 
     if context.user_data['screenshot_count'] >= 10:
-        # Все 10 скриншотов собраны
         context.user_data['awaiting_screenshots'] = False
 
-        # Отправляем скриншоты админам
         user_info = user_data[user_id]
         for admin_id in ADMINS:
             if admin_id.isdigit():
                 try:
-                    # Отправляем сообщение админу с кнопками
                     keyboard = [
                         [InlineKeyboardButton("✅ Одобрить", callback_data=f"approve_vpn_{user_id}")],
                         [InlineKeyboardButton("❌ Отклонить", callback_data=f"reject_vpn_{user_id}")]
@@ -1082,7 +1032,6 @@ async def handle_screenshots(update, context):
                         reply_markup=reply_markup
                     )
 
-                    # Отправляем все скриншоты
                     for i, photo_id in enumerate(context.user_data['screenshots'], 1):
                         await context.bot.send_photo(
                             chat_id=int(admin_id),
@@ -1093,7 +1042,6 @@ async def handle_screenshots(update, context):
                 except Exception as e:
                     logger.error(f"Error sending to admin {admin_id}: {e}")
 
-        # Очищаем данные
         context.user_data['screenshots'] = []
         context.user_data['screenshot_count'] = 0
 
@@ -1108,7 +1056,6 @@ async def handle_screenshots(update, context):
         await update.message.reply_text(text, parse_mode='Markdown', reply_markup=reply_markup)
 
     else:
-        # Ждем следующие скриншоты
         text = (
             f"📸 *Отправь скриншоты*\n\n"
             f"Отправлено: {context.user_data['screenshot_count']}/10\n"
@@ -1134,24 +1081,20 @@ async def approve_vpn(update, context):
         await query.edit_message_text("❌ Пользователь не найден!")
         return
 
-    # Генерируем VPN код
     vpn_code = generate_vpn_code()
     bot_username = context.bot.username
     vpn_link = f"https://t.me/{bot_username}?start=vpn_{vpn_code}"
 
-    # Активируем VPN у пользователя
     user_data[user_id]["vpn_active"] = True
     user_data[user_id]["vpn_code"] = vpn_code
     user_data[user_id]["vpn_request"] = {"status": "approved", "approved_at": datetime.now().isoformat()}
 
-    # Удаляем из ожидающих
     if user_id in pending:
         del pending[user_id]
 
     save_json(USER_DATA_FILE, user_data)
     save_json(PENDING_REQUESTS_FILE, pending)
 
-    # Отправляем пользователю VPN ссылку
     try:
         await context.bot.send_message(
             chat_id=int(user_id),
@@ -1163,7 +1106,6 @@ async def approve_vpn(update, context):
     except Exception as e:
         logger.error(f"Error sending VPN to user {user_id}: {e}")
 
-    # Обновляем сообщение админа
     keyboard = [[InlineKeyboardButton("✅ Одобрено", callback_data="done")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
@@ -1189,17 +1131,14 @@ async def reject_vpn(update, context):
         await query.edit_message_text("❌ Пользователь не найден!")
         return
 
-    # Обновляем статус заявки
     user_data[user_id]["vpn_request"] = {"status": "rejected", "rejected_at": datetime.now().isoformat()}
 
-    # Удаляем из ожидающих
     if user_id in pending:
         del pending[user_id]
 
     save_json(USER_DATA_FILE, user_data)
     save_json(PENDING_REQUESTS_FILE, pending)
 
-    # Отправляем пользователю уведомление об отказе
     try:
         keyboard = [[InlineKeyboardButton("📝 Попробовать снова", callback_data="vpn_comment")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1213,7 +1152,6 @@ async def reject_vpn(update, context):
     except Exception as e:
         logger.error(f"Error sending rejection to user {user_id}: {e}")
 
-    # Обновляем сообщение админа
     keyboard = [[InlineKeyboardButton("❌ Отклонено", callback_data="done")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
@@ -1235,7 +1173,6 @@ async def admin_panel(update, context):
     pending = load_json(PENDING_REQUESTS_FILE)
     user_data = load_json(USER_DATA_FILE)
 
-    # Подсчет статистики
     total_users = len(user_data)
     pending_requests = len(pending)
     premium_users = sum(1 for u in user_data.values() if u.get('premium', False))
@@ -1247,6 +1184,7 @@ async def admin_panel(update, context):
         [InlineKeyboardButton("📝 Заявки на VPN", callback_data="admin_requests")],
         [InlineKeyboardButton("📢 Рассылка", callback_data="admin_broadcast")],
         [InlineKeyboardButton("💎 Управление балансом", callback_data="admin_balance")],
+        [InlineKeyboardButton("⭐ Подарить премиум", callback_data="admin_gift_premium")],
         [InlineKeyboardButton("🔙 Назад", callback_data="back")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1265,6 +1203,7 @@ async def admin_panel(update, context):
     await send_with_image(update, context, text, reply_markup)
 
 
+# ========== АДМИН-СТАТИСТИКА ==========
 async def admin_stats(update, context):
     query = update.callback_query
     await query.answer()
@@ -1281,7 +1220,6 @@ async def admin_stats(update, context):
     total_balance = sum(u.get('balance', 0) for u in user_data.values())
     total_referrals = sum(len(u.get('referrals', [])) for u in user_data.values())
 
-    # Топ пользователей по кликам
     top_clicks = sorted(user_data.items(), key=lambda x: x[1].get('clicks', 0), reverse=True)[:5]
     top_users_text = "\n".join([
         f"{i + 1}. {u[1].get('first_name', 'Неизвестно')} - {u[1].get('clicks', 0)} кликов"
@@ -1304,6 +1242,7 @@ async def admin_stats(update, context):
     await send_with_image(update, context, text, reply_markup)
 
 
+# ========== ЗАЯВКИ НА VPN ==========
 async def admin_requests(update, context):
     query = update.callback_query
     await query.answer()
@@ -1321,7 +1260,6 @@ async def admin_requests(update, context):
         await send_with_image(update, context, text, reply_markup)
         return
 
-    # Показываем список заявок
     text = "📝 *Активные заявки на VPN:*\n\n"
     keyboard = []
 
@@ -1379,6 +1317,7 @@ async def view_request(update, context):
     await send_with_image(update, context, text, reply_markup)
 
 
+# ========== РАССЫЛКА ==========
 async def admin_broadcast(update, context):
     query = update.callback_query
     await query.answer()
@@ -1387,21 +1326,154 @@ async def admin_broadcast(update, context):
         await query.edit_message_text("❌ У тебя нет прав администратора!")
         return
 
-    context.user_data['broadcast_mode'] = True
-
-    keyboard = [[InlineKeyboardButton("🔙 Отмена", callback_data="admin_panel")]]
+    keyboard = [
+        [InlineKeyboardButton("📝 Текст", callback_data="broadcast_text")],
+        [InlineKeyboardButton("🖼 Фото", callback_data="broadcast_photo")],
+        [InlineKeyboardButton("🎥 Видео", callback_data="broadcast_video")],
+        [InlineKeyboardButton("🔙 Назад", callback_data="admin_panel")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     text = (
         "📢 *Рассылка*\n\n"
-        "Отправь сообщение для рассылки.\n"
-        "Можно использовать текст, фото, видео или другие медиа.\n\n"
+        "Выбери тип сообщения для рассылки:\n\n"
         "⚠️ Сообщение будет отправлено ВСЕМ пользователям!"
     )
 
     await send_with_image(update, context, text, reply_markup)
 
 
+async def broadcast_text(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    if not is_admin(query.from_user):
+        await query.edit_message_text("❌ У тебя нет прав администратора!")
+        return
+
+    context.user_data['broadcast_type'] = 'text'
+    context.user_data['broadcast_mode'] = True
+
+    keyboard = [[InlineKeyboardButton("🔙 Отмена", callback_data="admin_broadcast")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    text = "📢 *Отправь текст для рассылки*\n\n⚠️ Сообщение будет отправлено ВСЕМ пользователям!"
+    await send_with_image(update, context, text, reply_markup)
+
+
+async def broadcast_photo(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    if not is_admin(query.from_user):
+        await query.edit_message_text("❌ У тебя нет прав администратора!")
+        return
+
+    context.user_data['broadcast_type'] = 'photo'
+    context.user_data['broadcast_mode'] = True
+
+    keyboard = [[InlineKeyboardButton("🔙 Отмена", callback_data="admin_broadcast")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    text = "📢 *Отправь фото для рассылки*\n\n⚠️ Сообщение будет отправлено ВСЕМ пользователям!"
+    await send_with_image(update, context, text, reply_markup)
+
+
+async def broadcast_video(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    if not is_admin(query.from_user):
+        await query.edit_message_text("❌ У тебя нет прав администратора!")
+        return
+
+    context.user_data['broadcast_type'] = 'video'
+    context.user_data['broadcast_mode'] = True
+
+    keyboard = [[InlineKeyboardButton("🔙 Отмена", callback_data="admin_broadcast")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    text = "📢 *Отправь видео для рассылки*\n\n⚠️ Сообщение будет отправлено ВСЕМ пользователям!"
+    await send_with_image(update, context, text, reply_markup)
+
+
+async def handle_broadcast(update, context):
+    if not context.user_data.get('broadcast_mode', False):
+        return
+
+    admin_id = str(update.effective_user.id)
+    user_data = load_json(USER_DATA_FILE)
+
+    if admin_id not in user_data or not user_data[admin_id].get('is_admin', False):
+        return
+
+    broadcast_type = context.user_data.get('broadcast_type', 'text')
+    users = list(user_data.keys())
+    
+    if not users:
+        await update.message.reply_text("❌ Нет пользователей для рассылки!")
+        context.user_data['broadcast_mode'] = False
+        return
+
+    sent = 0
+    failed = 0
+
+    progress_msg = await update.message.reply_text(
+        f"📢 Начинаю рассылку {len(users)} пользователям...\n"
+        f"Тип: {broadcast_type}"
+    )
+
+    for i, uid in enumerate(users, 1):
+        try:
+            if broadcast_type == 'photo' and update.message.photo:
+                photo = update.message.photo[-1].file_id
+                caption = update.message.caption or "📢 Важное сообщение от администрации!"
+                await context.bot.send_photo(
+                    chat_id=int(uid),
+                    photo=photo,
+                    caption=caption
+                )
+            elif broadcast_type == 'video' and update.message.video:
+                caption = update.message.caption or "📢 Важное сообщение от администрации!"
+                await context.bot.send_video(
+                    chat_id=int(uid),
+                    video=update.message.video.file_id,
+                    caption=caption
+                )
+            else:
+                text = update.message.text or "📢 Важное сообщение от администрации!"
+                await context.bot.send_message(
+                    chat_id=int(uid),
+                    text=text,
+                    parse_mode='Markdown'
+                )
+            sent += 1
+        except Exception as e:
+            failed += 1
+            logger.error(f"Error broadcasting to {uid}: {e}")
+
+        if i % 10 == 0:
+            try:
+                await progress_msg.edit_text(
+                    f"📢 Рассылка в процессе... ({i}/{len(users)})\n"
+                    f"✅ Отправлено: {sent}\n"
+                    f"❌ Ошибок: {failed}"
+                )
+            except:
+                pass
+
+    await progress_msg.edit_text(
+        f"✅ *Рассылка завершена!*\n\n"
+        f"📨 Отправлено: {sent} пользователям\n"
+        f"❌ Ошибок: {failed}\n"
+        f"📊 Всего: {len(users)} пользователей"
+    )
+
+    context.user_data['broadcast_mode'] = False
+    context.user_data['broadcast_type'] = None
+
+
+# ========== УПРАВЛЕНИЕ БАЛАНСОМ ==========
 async def admin_balance(update, context):
     query = update.callback_query
     await query.answer()
@@ -1487,7 +1559,6 @@ async def handle_balance_input(update, context):
                 f"💰 Новый баланс: {user_data[target_user_id]['balance']}"
             )
 
-            # Уведомляем пользователя
             try:
                 await context.bot.send_message(
                     chat_id=int(target_user_id),
@@ -1513,7 +1584,6 @@ async def handle_balance_input(update, context):
                 f"💰 Новый баланс: {user_data[target_user_id]['balance']}"
             )
 
-            # Уведомляем пользователя
             try:
                 await context.bot.send_message(
                     chat_id=int(target_user_id),
@@ -1534,66 +1604,102 @@ async def handle_balance_input(update, context):
         )
 
 
-async def handle_broadcast(update, context):
-    if not context.user_data.get('broadcast_mode', False):
+# ========== ДАРЕНИЕ ПРЕМИУМА ==========
+async def admin_gift_premium(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    if not is_admin(query.from_user):
+        await query.edit_message_text("❌ У тебя нет прав администратора!")
         return
 
-    user_id = str(update.effective_user.id)
-    user_data = load_json(USER_DATA_FILE)
+    context.user_data['gift_mode'] = True
 
-    if user_id not in user_data or not user_data[user_id].get('is_admin', False):
-        return
+    keyboard = [[InlineKeyboardButton("🔙 Отмена", callback_data="admin_panel")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Отправляем сообщение всем пользователям
-    users = list(user_data.keys())
-    sent = 0
-
-    # Уведомляем админа о начале рассылки
-    progress_msg = await update.message.reply_text(f"📢 Начинаю рассылку {len(users)} пользователям...")
-
-    for i, uid in enumerate(users, 1):
-        try:
-            if update.message.photo:
-                await context.bot.send_photo(
-                    chat_id=int(uid),
-                    photo=update.message.photo[-1].file_id,
-                    caption=update.message.caption or ""
-                )
-            elif update.message.video:
-                await context.bot.send_video(
-                    chat_id=int(uid),
-                    video=update.message.video.file_id,
-                    caption=update.message.caption or ""
-                )
-            elif update.message.document:
-                await context.bot.send_document(
-                    chat_id=int(uid),
-                    document=update.message.document.file_id,
-                    caption=update.message.caption or ""
-                )
-            else:
-                await context.bot.send_message(
-                    chat_id=int(uid),
-                    text=update.message.text
-                )
-            sent += 1
-        except Exception as e:
-            logger.error(f"Error broadcasting to {uid}: {e}")
-
-        # Обновляем прогресс каждые 10 пользователей
-        if i % 10 == 0:
-            try:
-                await progress_msg.edit_text(f"📢 Рассылка в процессе... ({i}/{len(users)})")
-            except:
-                pass
-
-    await progress_msg.edit_text(
-        f"✅ Рассылка завершена!\n"
-        f"📨 Отправлено: {sent} пользователям\n"
-        f"❌ Ошибок: {len(users) - sent}"
+    text = (
+        "⭐ *Подарить премиум*\n\n"
+        "Отправь ID или @username пользователя, которому хочешь подарить премиум.\n\n"
+        "Примеры:\n"
+        "`7737148018`\n"
+        "`@mil8kavpn`\n\n"
+        "⚠️ Премиум будет выдан на 30 дней!"
     )
 
-    context.user_data['broadcast_mode'] = False
+    await send_with_image(update, context, text, reply_markup)
+
+
+async def handle_gift_premium(update, context):
+    if not context.user_data.get('gift_mode', False):
+        return
+
+    admin_id = str(update.effective_user.id)
+    user_data = load_json(USER_DATA_FILE)
+
+    if admin_id not in user_data or not user_data[admin_id].get('is_admin', False):
+        return
+
+    user_input = update.message.text.strip()
+    target_user_id = None
+    target_username = None
+
+    if user_input.startswith('@'):
+        target_username = user_input[1:].lower()
+        for uid, uinfo in user_data.items():
+            if uinfo.get('username', '').lower() == target_username:
+                target_user_id = uid
+                break
+    else:
+        target_user_id = user_input
+
+    if target_user_id not in user_data:
+        await update.message.reply_text(
+            "❌ Пользователь не найден!\n"
+            "Проверь правильность ID или @username."
+        )
+        return
+
+    user_data[target_user_id]["premium"] = True
+    user_data[target_user_id]["premium_until"] = (datetime.now() + timedelta(days=30)).isoformat()
+
+    save_json(USER_DATA_FILE, user_data)
+
+    target_name = user_data[target_user_id].get('first_name', 'Пользователь')
+
+    await update.message.reply_text(
+        f"✅ *Премиум подарен!*\n\n"
+        f"👤 Пользователь: {target_name}\n"
+        f"🆔 ID: `{target_user_id}`\n"
+        f"⏳ Действует 30 дней\n\n"
+        f"Пользователь уведомлен."
+    )
+
+    try:
+        keyboard = [
+            [InlineKeyboardButton("👤 Профиль", callback_data="profile")],
+            [InlineKeyboardButton("🏠 Главное меню", callback_data="back")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await context.bot.send_message(
+            chat_id=int(target_user_id),
+            text=(
+                f"⭐ *Поздравляем! Тебе подарили Премиум Статус!*\n\n"
+                f"🔥 Теперь ты получаешь:\n"
+                f"• 🪙 +5 монет за клик\n"
+                f"• 💰 Скидка 50% на все товары\n"
+                f"• 🌈 Радужный ник в профиле\n"
+                f"• 👑 Эксклюзивный статус\n\n"
+                f"⏳ Премиум активен 30 дней!"
+            ),
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+    except Exception as e:
+        logger.error(f"Error notifying user {target_user_id}: {e}")
+
+    context.user_data['gift_mode'] = False
 
 
 # ========== ПОКУПКА VPN ЗА МОНЕТЫ ==========
@@ -1669,7 +1775,6 @@ async def buy_vpn_callback(update, context):
         await send_with_image(update, context, text, reply_markup)
         return
 
-    # Покупка VPN
     vpn_code = generate_vpn_code()
     bot_username = context.bot.username
     vpn_link = f"https://t.me/{bot_username}?start=vpn_{vpn_code}"
@@ -1760,17 +1865,50 @@ async def button_handler(update, context):
         await view_request(update, context)
     elif data == "admin_broadcast":
         await admin_broadcast(update, context)
+    elif data == "broadcast_text":
+        await broadcast_text(update, context)
+    elif data == "broadcast_photo":
+        await broadcast_photo(update, context)
+    elif data == "broadcast_video":
+        await broadcast_video(update, context)
     elif data == "admin_balance":
         await admin_balance(update, context)
     elif data == "add_balance":
         await add_balance_start(update, context)
     elif data == "remove_balance":
         await remove_balance_start(update, context)
+    elif data == "admin_gift_premium":
+        await admin_gift_premium(update, context)
     elif data == "done":
         await query.answer()
 
 
-# ========== ЗАПУСК ==========
+# ========== ВЕБ-СЕРВЕР ДЛЯ RENDER ==========
+from flask import Flask
+import threading
+import os
+
+# Создаём Flask приложение
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def health_check():
+    return "🤖 Бот работает!", 200
+
+@flask_app.route('/health')
+def health():
+    return "OK", 200
+
+def run_web_server():
+    port = int(os.environ.get('PORT', 10000))
+    flask_app.run(host='0.0.0.0', port=port, debug=False)
+
+# Запускаем веб-сервер в отдельном потоке
+threading.Thread(target=run_web_server, daemon=True).start()
+print("✅ Веб-сервер запущен!")
+
+
+# ========== ОСНОВНАЯ ФУНКЦИЯ ==========
 def main():
     print("=" * 50)
     print("🤖 БОТ С VPN И АДМИН-ПАНЕЛЬЮ")
@@ -1787,6 +1925,7 @@ def main():
     print(f"👑 Админы: {', '.join(ADMINS)}")
     print("=" * 50)
 
+    # Создаём приложение
     application = Application.builder().token(BOT_TOKEN).build()
 
     # Команды
@@ -1805,6 +1944,9 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
     application.add_handler(MessageHandler(filters.PHOTO, handle_broadcast))
 
+    # Обработка дарения премиума
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_gift_premium))
+
     # Обработка оплаты
     application.add_handler(PreCheckoutQueryHandler(pre_checkout_handler))
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_handler))
@@ -1812,6 +1954,8 @@ def main():
     # Обработчик кнопок
     application.add_handler(CallbackQueryHandler(button_handler))
 
+    # Запускаем бота
+    print("🚀 Бот запущен и работает!")
     application.run_polling(drop_pending_updates=True)
 
 
