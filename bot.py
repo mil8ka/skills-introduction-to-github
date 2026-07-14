@@ -1890,11 +1890,11 @@ from flask import Flask
 # Создаём Flask приложение
 web_app = Flask(__name__)
 
-@web_app.route('/')
+@web_app.route('/', methods=['GET', 'HEAD'])
 def home():
     return "OK", 200
 
-@web_app.route('/health')
+@web_app.route('/health', methods=['GET', 'HEAD'])
 def health():
     return "OK", 200
 
