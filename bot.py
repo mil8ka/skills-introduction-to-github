@@ -8,8 +8,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Labeled
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, \
     PreCheckoutQueryHandler
 import logging
+import threading
 
-# Настройка логирования
+# ========== НАСТРОЙКА ЛОГИРОВАНИЯ ==========
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -1883,29 +1884,28 @@ async def button_handler(update, context):
         await query.answer()
 
 
-# ========== ВЕБ-СЕРВЕР ДЛЯ RENDER ==========
+# ========== ВЕБ-СЕРВЕР ДЛЯ UPTIMEROBOT ==========
 from flask import Flask
-import threading
-import os
 
 # Создаём Flask приложение
-flask_app = Flask(__name__)
+web_app = Flask(__name__)
 
-@flask_app.route('/')
-def health_check():
-    return "🤖 Бот работает!", 200
+@web_app.route('/')
+def home():
+    return "OK", 200
 
-@flask_app.route('/health')
+@web_app.route('/health')
 def health():
     return "OK", 200
 
-def run_web_server():
+def run_web():
     port = int(os.environ.get('PORT', 10000))
-    flask_app.run(host='0.0.0.0', port=port, debug=False)
+    web_app.run(host='0.0.0.0', port=port, debug=False)
 
 # Запускаем веб-сервер в отдельном потоке
-threading.Thread(target=run_web_server, daemon=True).start()
-print("✅ Веб-сервер запущен!")
+web_thread = threading.Thread(target=run_web, daemon=True)
+web_thread.start()
+print("✅ Веб-сервер запущен на порту 10000")
 
 
 # ========== ОСНОВНАЯ ФУНКЦИЯ ==========
