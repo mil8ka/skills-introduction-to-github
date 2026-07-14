@@ -1930,27 +1930,27 @@ def main():
 
     # Команды
     application.add_handler(CommandHandler("start", start))
-
+    
     # Обработка текста для редактирования
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_text))
-
+    
     # Обработка скриншотов
     application.add_handler(MessageHandler(filters.PHOTO, handle_screenshots))
-
+    
     # Обработка баланса
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_balance_input))
-
+    
     # Обработка рассылки
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast))
     application.add_handler(MessageHandler(filters.PHOTO, handle_broadcast))
-
+    
     # Обработка дарения премиума
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_gift_premium))
-
+    
     # Обработка оплаты
     application.add_handler(PreCheckoutQueryHandler(pre_checkout_handler))
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_handler))
-
+    
     # Обработчик кнопок
     application.add_handler(CallbackQueryHandler(button_handler))
 
