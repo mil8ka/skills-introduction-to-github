@@ -1902,11 +1902,6 @@ def run_web():
     port = int(os.environ.get('PORT', 10000))
     web_app.run(host='0.0.0.0', port=port, debug=False)
 
-# Запускаем веб-сервер в отдельном потоке
-web_thread = threading.Thread(target=run_web, daemon=True)
-web_thread.start()
-print("✅ Веб-сервер запущен на порту 10000")
-
 
 # ========== ОСНОВНАЯ ФУНКЦИЯ ==========
 def main():
@@ -1924,6 +1919,11 @@ def main():
     print("👑 Администратор: 1 ⭐")
     print(f"👑 Админы: {', '.join(ADMINS)}")
     print("=" * 50)
+
+    # ✅ ЗАПУСКАЕМ ВЕБ-СЕРВЕР В ОТДЕЛЬНОМ ПОТОКЕ
+    web_thread = threading.Thread(target=run_web, daemon=True)
+    web_thread.start()
+    print("✅ Веб-сервер запущен на порту 10000")
 
     # Создаём приложение
     application = Application.builder().token(BOT_TOKEN).build()
